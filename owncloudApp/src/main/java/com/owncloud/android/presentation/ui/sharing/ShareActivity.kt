@@ -29,7 +29,14 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.fragment.app.transaction
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.owncloud.android.R
+import com.owncloud.android.data.files.workers.DownloadFileWorker
+import com.owncloud.android.data.files.workers.DownloadFileWorker.Companion.KEY_PARAM_ACCOUNT
+import com.owncloud.android.data.files.workers.DownloadFileWorker.Companion.KEY_PARAM_REMOTE_PATH
+import com.owncloud.android.data.files.workers.DownloadFileWorker.Companion.KEY_PARAM_STORAGE_PATH
 import com.owncloud.android.datamodel.OCFile
 import com.owncloud.android.domain.sharing.shares.model.OCShare
 import com.owncloud.android.domain.sharing.shares.model.ShareType
@@ -69,6 +76,14 @@ class ShareActivity : FileActivity(), ShareFragmentListener {
 
         // Set back button
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
+        val inputData = workDataOf(
+            KEY_PARAM_ACCOUNT to account.name,
+            KEY_PARAM_REMOTE_PATH to file.remotePath,
+            KEY_PARAM_STORAGE_PATH to file.storagePath
+        )
+        val downloadFileWorker = OneTimeWorkRequestBuilder<DownloadFileWorker>().setInputData(inputData).build()
+        WorkManager.getInstance(applicationContext).enqueue(downloadFileWorker)
 
         supportFragmentManager.transaction {
             if (savedInstanceState == null && file != null && account != null) {

@@ -21,8 +21,10 @@ package com.owncloud.android.data.files.workers
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.owncloud.android.data.ext.showNotificationWithProgress
 import com.owncloud.android.data.files.storage.FileStorageUtils
 import com.owncloud.android.lib.common.OwnCloudClient
+import com.owncloud.android.lib.common.network.OnDatatransferProgressListener
 import com.owncloud.android.lib.common.operations.RemoteOperationResult
 import com.owncloud.android.lib.resources.files.DownloadRemoteFileOperation
 import org.koin.core.KoinComponent
@@ -33,7 +35,10 @@ import java.io.File
 class DownloadFileWorker(
     appContext: Context,
     private val workerParameters: WorkerParameters
-) : CoroutineWorker(appContext, workerParameters), KoinComponent {
+) : CoroutineWorker(
+    appContext,
+    workerParameters
+), KoinComponent, OnDatatransferProgressListener {
 
     val client: OwnCloudClient by inject()
     lateinit var downloadRemoteFileOperation: DownloadRemoteFileOperation
@@ -52,6 +57,8 @@ class DownloadFileWorker(
             remotePath,
             FileStorageUtils.getTemporalPath(accountName)
         )
+
+        downloadRemoteFileOperation.addDatatransferProgressListener(this)
 
         return try {
             val result = downloadFile()
@@ -120,6 +127,15 @@ class DownloadFileWorker(
         const val KEY_PARAM_ACCOUNT = "KEY_PARAM_ACCOUNT"
         const val KEY_PARAM_REMOTE_PATH = "KEY_PARAM_REMOTE_PATH"
         const val KEY_PARAM_STORAGE_PATH = "KEY_PARAM_STORAGE_PATH"
+    }
+
+    override fun onTransferProgress(read: Long, transferred: Long, percent: Long, absolutePath: String?) {
+        showNotificationWithProgress(
+            maxValue = percent.toInt() + read.toInt(),
+            progress = percent.toInt(),
+            notificationChannelName = "DOWNLOAD",
+            notificationId = "123"
+        )
     }
 
 }
