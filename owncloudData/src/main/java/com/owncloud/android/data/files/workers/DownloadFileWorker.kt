@@ -22,36 +22,44 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.owncloud.android.data.files.storage.FileStorageUtils
-import com.owncloud.android.domain.files.model.OCFile
 import com.owncloud.android.lib.common.OwnCloudClient
 import com.owncloud.android.lib.common.operations.RemoteOperationResult
 import com.owncloud.android.lib.resources.files.DownloadRemoteFileOperation
+import org.koin.core.KoinComponent
+import org.koin.core.inject
 import timber.log.Timber
 import java.io.File
 
 class DownloadFileWorker(
     appContext: Context,
-    val client: OwnCloudClient,
     private val workerParameters: WorkerParameters
-) : CoroutineWorker(appContext, workerParameters) {
+) : CoroutineWorker(appContext, workerParameters), KoinComponent {
+
+    val client: OwnCloudClient by inject()
+    lateinit var downloadRemoteFileOperation: DownloadRemoteFileOperation
 
     lateinit var accountName: String
-    lateinit var downloadRemoteFileOperation: DownloadRemoteFileOperation
-    lateinit var ocFile: OCFile
+    lateinit var remotePath: String
+    private var storagePath: String? = ""
 
     override suspend fun doWork(): Result {
 
         accountName = workerParameters.inputData.getString(KEY_PARAM_ACCOUNT) as String
-        ocFile = workerParameters.inputData.keyValueMap[KEY_PARAM_OCFILE] as OCFile
+        remotePath = workerParameters.inputData.getString(KEY_PARAM_REMOTE_PATH) as String
+        storagePath = workerParameters.inputData.getString(KEY_PARAM_STORAGE_PATH)
 
         downloadRemoteFileOperation = DownloadRemoteFileOperation(
-            ocFile.remotePath,
+            remotePath,
             FileStorageUtils.getTemporalPath(accountName)
         )
 
         return try {
-            downloadFile()
-            Result.success()
+            val result = downloadFile()
+            if (result.isSuccess) {
+                Result.success()
+            } else {
+                throw result.exception
+            }
         } catch (throwable: Throwable) {
             // clean up and log
             Result.failure()
@@ -59,7 +67,7 @@ class DownloadFileWorker(
 
     }
 
-    private fun downloadFile() {
+    private fun downloadFile(): RemoteOperationResult<Any> {
         /// download will be performed to a temporal file, then moved to the final location
         val tmpFile = File(temporalPath)
 
@@ -88,11 +96,13 @@ class DownloadFileWorker(
             if (!moved) {
                 result = RemoteOperationResult(RemoteOperationResult.ResultCode.LOCAL_STORAGE_NOT_MOVED)
             }
+
         }
+        return result
     }
 
     private val temporalPath
-        get() = temporalFolder + ocFile.remotePath
+        get() = temporalFolder + remotePath
 
     private val temporalFolder
         get() = FileStorageUtils.getTemporalPath(accountName)
@@ -100,15 +110,16 @@ class DownloadFileWorker(
     private val savePathForFile: String
         get() =
             // re-downloads should be done over the original file
-            ocFile.storagePath.takeUnless { it.isNullOrBlank() }
+            storagePath.takeUnless { it.isNullOrBlank() }
                 ?: FileStorageUtils.getDefaultSavePathFor(
                     accountName,
-                    ocFile.remotePath
+                    remotePath
                 )
 
     companion object {
         const val KEY_PARAM_ACCOUNT = "KEY_PARAM_ACCOUNT"
-        const val KEY_PARAM_OCFILE = "KEY_PARAM_OCFILE"
+        const val KEY_PARAM_REMOTE_PATH = "KEY_PARAM_REMOTE_PATH"
+        const val KEY_PARAM_STORAGE_PATH = "KEY_PARAM_STORAGE_PATH"
     }
 
 }

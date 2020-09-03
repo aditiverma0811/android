@@ -26,6 +26,6 @@ import org.koin.dsl.module
 
 val workerModule = module {
     factory { (downloadFileWorkerParams: WorkerParameters) ->
-        DownloadFileWorker(androidContext(), get(), downloadFileWorkerParams)
+        DownloadFileWorker(androidContext(), downloadFileWorkerParams)
     }
 }
