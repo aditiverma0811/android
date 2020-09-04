@@ -47,15 +47,15 @@ fun CoroutineWorker.showNotificationWithProgress(
 
     val notificationBuilder = NotificationCompat.Builder(
         applicationContext, notificationId
-    ).setContentTitle("Descargando")
+    ).setContentTitle("Downloading")
         .setSmallIcon(R.drawable.ic_android_black_24dp)
 
 
     if (progress == maxValue) {
-        notificationBuilder.setContentText("Completo")
+        notificationBuilder.setContentText("Complete")
             .setTimeoutAfter(1_000)
     } else {
-        notificationBuilder.setContentText("Progreso")
+        notificationBuilder.setContentText("In progress")
             .setProgress(maxValue, progress, false)
 
     }

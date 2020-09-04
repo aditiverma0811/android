@@ -29,16 +29,17 @@ data class OCFile(
     val id: Long? = null,
     val parentId: Long? = null,
     val owner: String,
-    val length: Long,
+    var length: Long,
     val creationTimestamp: Long? = null,
-    val modifiedTimestamp: Long,
+    var needsToUpdateThumbnail: Boolean? = null,
+    var modifiedTimestamp: Long,
     val remotePath: String,
     val mimeType: String,
-    val etag: String? = null,
+    var etag: String? = null,
     val permissions: String? = null,
     val remoteId: String? = null,
     val privateLink: String? = null,
-    val storagePath: String? = null
+    var storagePath: String? = null
 ) : Parcelable {
 
     /**

@@ -22,6 +22,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.owncloud.android.data.ext.showNotificationWithProgress
+import com.owncloud.android.data.files.datasources.LocalFileDataSource
 import com.owncloud.android.data.files.storage.FileStorageUtils
 import com.owncloud.android.lib.common.OwnCloudClient
 import com.owncloud.android.lib.common.network.OnDatatransferProgressListener
@@ -43,6 +44,7 @@ class DownloadFileWorker(
     val client: OwnCloudClient by inject()
     lateinit var downloadRemoteFileOperation: DownloadRemoteFileOperation
 
+    private var fileId: Long = -1
     lateinit var accountName: String
     lateinit var remotePath: String
     private var storagePath: String? = ""
@@ -52,6 +54,7 @@ class DownloadFileWorker(
         accountName = workerParameters.inputData.getString(KEY_PARAM_ACCOUNT) as String
         remotePath = workerParameters.inputData.getString(KEY_PARAM_REMOTE_PATH) as String
         storagePath = workerParameters.inputData.getString(KEY_PARAM_STORAGE_PATH)
+        fileId = workerParameters.inputData.getLong(KEY_PARAM_FILE_ID, -1)
 
         downloadRemoteFileOperation = DownloadRemoteFileOperation(
             remotePath,
@@ -63,6 +66,7 @@ class DownloadFileWorker(
         return try {
             val result = downloadFile()
             if (result.isSuccess) {
+                saveDownloadedFile()
                 Result.success()
             } else {
                 throw result.exception
@@ -85,27 +89,44 @@ class DownloadFileWorker(
                 Timber.w("Not enough space to copy %s", tmpFile.absolutePath)
             }
 
-            val modificationTimestamp = downloadRemoteFileOperation.modificationTimestamp
-            val etag = downloadRemoteFileOperation.etag
-
             val newFile = File(savePathForFile)
             Timber.d("Save path: %s", newFile.absolutePath)
             val parent: File? = newFile.parentFile
             val created = parent?.mkdirs()
             parent?.let {
                 Timber.d("Creation of parent folder ${it.absolutePath} succeeded: $created")
-                Timber.d("Parent folder ${it.absolutePath} exists: ${it.exists()}")
-                Timber.d("Parent folder ${it.absolutePath} is directory: ${it.isDirectory}")
+                Timber.d("Parent folder ${it.absolutePath} is directory: ${it.isDirectory} exists: ${it.exists()}")
             }
             val moved = tmpFile.renameTo(newFile)
-            Timber.d("New file ${newFile.absolutePath} exists: ${newFile.exists()}")
-            Timber.d("New file ${newFile.absolutePath} is directory: ${newFile.isDirectory}")
+            Timber.d("New file ${newFile.absolutePath} is directory: ${newFile.isDirectory} and exists: ${newFile.exists()}")
             if (!moved) {
                 result = RemoteOperationResult(RemoteOperationResult.ResultCode.LOCAL_STORAGE_NOT_MOVED)
             }
 
         }
         return result
+    }
+
+    /**
+     * Updates the OC File after a successful download.
+     */
+    private fun saveDownloadedFile() {
+        val localFileDataSource: LocalFileDataSource by inject()
+
+        // TODO: Handle this kind of problems in a better way
+        val ocFile = localFileDataSource.getFile(fileId) ?: return
+
+        ocFile.apply {
+            needsToUpdateThumbnail = true
+            modifiedTimestamp = downloadRemoteFileOperation.modificationTimestamp
+            etag = downloadRemoteFileOperation.etag
+            storagePath = savePathForFile
+            length = (File(savePathForFile).length())
+        }
+        localFileDataSource.saveFile(ocFile)
+
+        //mStorageManager.triggerMediaScan(file.getStoragePath())
+        //mStorageManager.saveConflict(file, null)
     }
 
     private val temporalPath
@@ -118,24 +139,27 @@ class DownloadFileWorker(
         get() =
             // re-downloads should be done over the original file
             storagePath.takeUnless { it.isNullOrBlank() }
-                ?: FileStorageUtils.getDefaultSavePathFor(
-                    accountName,
-                    remotePath
-                )
+                ?: FileStorageUtils.getDefaultSavePathFor(accountName, remotePath)
+
+    override fun onTransferProgress(
+        progressRate: Long,
+        totalTransferredSoFar: Long,
+        totalToTransfer: Long,
+        filePath: String
+    ) {
+        showNotificationWithProgress(
+            maxValue = totalToTransfer.toInt(),
+            progress = totalTransferredSoFar.toInt(),
+            notificationChannelName = "DOWNLOAD",
+            notificationId = "123"
+        )
+    }
 
     companion object {
         const val KEY_PARAM_ACCOUNT = "KEY_PARAM_ACCOUNT"
         const val KEY_PARAM_REMOTE_PATH = "KEY_PARAM_REMOTE_PATH"
         const val KEY_PARAM_STORAGE_PATH = "KEY_PARAM_STORAGE_PATH"
-    }
-
-    override fun onTransferProgress(read: Long, transferred: Long, percent: Long, absolutePath: String?) {
-        showNotificationWithProgress(
-            maxValue = percent.toInt() + read.toInt(),
-            progress = percent.toInt(),
-            notificationChannelName = "DOWNLOAD",
-            notificationId = "123"
-        )
+        const val KEY_PARAM_FILE_ID = "KEY_PARAM_FILE_ID"
     }
 
 }

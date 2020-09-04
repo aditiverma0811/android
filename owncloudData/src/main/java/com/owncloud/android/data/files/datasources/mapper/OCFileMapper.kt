@@ -37,7 +37,8 @@ class OCFileMapper : Mapper<OCFile, OCFileEntity> {
                 modifiedTimestamp = it.modifiedTimestamp,
                 etag = it.etag,
                 mimeType = it.mimeType,
-                length = it.length
+                length = it.length,
+                needsToUpdateThumbnail = entity.needsToUpdateThumbnail
             )
         }
 
@@ -54,7 +55,8 @@ class OCFileMapper : Mapper<OCFile, OCFileEntity> {
                 modifiedTimestamp = it.modifiedTimestamp,
                 etag = it.etag,
                 mimeType = it.mimeType,
-                length = it.length
+                length = it.length,
+                needsToUpdateThumbnail = it.needsToUpdateThumbnail
             )
         }
 }

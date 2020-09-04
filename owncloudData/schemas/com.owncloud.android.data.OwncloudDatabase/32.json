@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 32,
-    "identityHash": "b6b83a1ac05f23c3f494fd32a8f753e1",
+    "identityHash": "1e6b2570f98800b518adb59ee6ba874c",
     "entities": [
       {
         "tableName": "capabilities",
@@ -199,7 +199,7 @@
       },
       {
         "tableName": "files",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `parentId` INTEGER, `owner` TEXT NOT NULL, `remotePath` TEXT NOT NULL, `remoteId` TEXT, `length` INTEGER NOT NULL, `creationTimestamp` INTEGER, `modifiedTimestamp` INTEGER NOT NULL, `mimeType` TEXT NOT NULL, `etag` TEXT, `permissions` TEXT, `privateLink` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `parentId` INTEGER, `owner` TEXT NOT NULL, `remotePath` TEXT NOT NULL, `remoteId` TEXT, `length` INTEGER NOT NULL, `creationTimestamp` INTEGER, `modifiedTimestamp` INTEGER NOT NULL, `mimeType` TEXT NOT NULL, `etag` TEXT, `permissions` TEXT, `privateLink` TEXT, `needsToUpdateThumbnail` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -271,6 +271,12 @@
             "fieldPath": "privateLink",
             "columnName": "privateLink",
             "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "needsToUpdateThumbnail",
+            "columnName": "needsToUpdateThumbnail",
+            "affinity": "INTEGER",
             "notNull": false
           }
         ],
@@ -441,7 +447,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b6b83a1ac05f23c3f494fd32a8f753e1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1e6b2570f98800b518adb59ee6ba874c')"
     ]
   }
 }

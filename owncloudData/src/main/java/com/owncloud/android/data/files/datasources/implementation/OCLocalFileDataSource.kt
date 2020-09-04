@@ -27,6 +27,12 @@ class OCLocalFileDataSource(
     private val fileDao: FileDao,
     private val ocFileMapper: OCFileMapper
 ) : LocalFileDataSource {
+
+    override fun getFile(id: Long): OCFile? =
+        ocFileMapper.toModel(
+            fileDao.getFileWithId(id)
+        )
+
     override fun saveFilesInFolder(listOfFiles: List<OCFile>, folder: OCFile) {
         // Insert first folder container
         // TODO: If it is root, add 0 as parent Id
@@ -37,5 +43,9 @@ class OCLocalFileDataSource(
             // Add parent id to each file
             fileDao.mergeRemoteAndLocalFile(ocFileMapper.toEntity(it)!!.apply { parentId = folderId })
         }
+    }
+
+    override fun saveFile(ocFile: OCFile) {
+        fileDao.mergeRemoteAndLocalFile(ocFileMapper.toEntity(ocFile)!!)
     }
 }

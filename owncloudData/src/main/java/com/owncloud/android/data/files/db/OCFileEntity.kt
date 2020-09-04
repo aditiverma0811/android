@@ -18,6 +18,7 @@
  */
 package com.owncloud.android.data.files.db
 
+import android.media.ThumbnailUtils
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.owncloud.android.data.ProviderMeta
@@ -36,7 +37,8 @@ data class OCFileEntity(
     val mimeType: String,
     val etag: String?,
     val permissions: String?,
-    val privateLink: String?
+    val privateLink: String?,
+    val needsToUpdateThumbnail: Boolean?
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0
